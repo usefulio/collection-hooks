@@ -195,6 +195,23 @@ Tinytest.add('UsefulCollections - hooks - local hooks run syncronously', functio
   });
 });
 
+Tinytest.add('UsefulCollections - hooks - catches & throws circular hooks', function (test) {
+  Books.x = function () {
+    if (Meteor.isServer)
+      Books._collection.x();
+  };
+  if (Meteor.isServer)
+    Books._collection.x = Books.x;
+  Books.hooks({
+    'before.x': function () {
+      Books.x();
+    }
+  });
+  test.throws(function () {
+    Books.x();
+  }, /circular hook/i);
+});
+
 if (Meteor.isServer) {
   Tinytest.addAsync('UsefulCollections - hooks - survives monkey patch', function (test, done) {
     var original = Books._collection.insert;
