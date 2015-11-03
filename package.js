@@ -13,11 +13,19 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.2.1');
   api.use('ecmascript');
+  api.use('mongo');
+  api.use('underscore');
+
   api.addFiles('collection-hooks.js');
 });
 
 Package.onTest(function(api) {
   api.use('ecmascript');
+  api.use('mongo');
+  api.use('underscore');
+  api.use('random');
+  api.use('accounts-base');
+
   api.use('tinytest');
   api.use('useful:collection-hooks');
   api.addFiles('collection-hooks-tests.js');
