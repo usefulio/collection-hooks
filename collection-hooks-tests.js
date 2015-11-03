@@ -159,9 +159,11 @@ Tinytest.add('UsefulCollections - hooks - local hooks run syncronously', functio
     "before.insert"
     , "before.update"
     , "before.remove"
+    , "before.findOne"
     , "after.insert"
     , "after.update"
     , "after.remove"
+    , "after.findOne"
   ];
   _.each(hookNames, function (hook) {
     hooks[hook] = function () {
@@ -174,6 +176,7 @@ Tinytest.add('UsefulCollections - hooks - local hooks run syncronously', functio
   var docId = Books.insert({
     logField: logField
   });
+  Books.findOne(docId);
   Books.update(docId, {
     $set: {
       changed: true
@@ -184,9 +187,11 @@ Tinytest.add('UsefulCollections - hooks - local hooks run syncronously', functio
     "before.insert": 1
     , "before.update": 1
     , "before.remove": 1
+    , "before.findOne": 1
     , "after.insert": 1
     , "after.update": 1
     , "after.remove": 1
+    , "after.findOne": 1
   });
 });
 
