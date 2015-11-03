@@ -2,7 +2,7 @@ var callstack = new Meteor.EnvironmentVariable();
 var withStackCheck = function (eventName, fn) {
   var currentStack = callstack.get() || [];
   if (_.contains(currentStack, eventName))
-    return fn(new Error('circular hook!'));
+    throw new Error('circular hook!');
   return callstack.withValue(currentStack.concat([eventName]), fn);
 };
 Mongo.Collection.prototype.hook = function (eventName, hook) {
@@ -31,50 +31,50 @@ Mongo.Collection.prototype.hook = function (eventName, hook) {
       if (_.isFunction(_.last(args)))
         callback = args.pop();
 
-      return withStackCheck(method, function (error) {
-        if (error) {
-          if (callback)
-            return callback(error);
-          else
-            throw error;
-        }
-
-        _.each(self.before, function (hook) {
-          hook.apply(collection, args);
-        });
-
-        var originalArgs = args.concat();
-        var callhooks = function (result) {
-          _.each(self.after, function (hook) {
-            try {
-              hook.apply(collection, originalArgs.concat([result]));
-            } catch (e) {
-              // XXX should we swallow this?
-              // do we consider the operation to successful, or failed
-              // the developer might expect side-effects from the after hook
-              // to exist, or they might not...
-              // It's really bad practice to write after hooks which can throw
-              // errors.
-              // error = new Error("Collection hook failed.");
-              // error.details = e;
-              console.error('Error in collection after hook:', e);
-            }
+      try {
+        return withStackCheck(method, function () {
+          _.each(self.before, function (hook) {
+            hook.apply(collection, args);
           });
-        };
 
-        if (callback) {
-          args.push(function (error, result) {
-            if (!error)
-              callhooks(result);
-            callback(error, result);
-          });
-          return original.apply(collection, args);
-        } else {
-          var result = original.apply(collection, args);
-          callhooks(result);
-          return result;
-        }
-      });
+          var originalArgs = args.concat();
+          var callhooks = function (result) {
+            _.each(self.after, function (hook) {
+              try {
+                hook.apply(collection, originalArgs.concat([result]));
+              } catch (e) {
+                // XXX should we swallow this?
+                // do we consider the operation to successful, or failed
+                // the developer might expect side-effects from the after hook
+                // to exist, or they might not...
+                // It's really bad practice to write after hooks which can throw
+                // errors.
+                // error = new Error("Collection hook failed.");
+                // error.details = e;
+                console.error('Error in collection after hook:', e);
+              }
+            });
+          };
+
+          if (callback) {
+            args.push(function (error, result) {
+              if (!error)
+                callhooks(result);
+              callback(error, result);
+            });
+            return original.apply(collection, args);
+          } else {
+            var result = original.apply(collection, args);
+            callhooks(result);
+            return result;
+          }
+        });        
+      } catch (e) {
+        if (callback)
+          return callback(e);
+        else
+          throw e;
+      } 
     };
     self.before = [];
     self.after = [];
