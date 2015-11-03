@@ -57,7 +57,7 @@ Mongo.Collection.prototype.hook = function (eventName, hook) {
               // errors.
               // error = new Error("Collection hook failed.");
               // error.details = e;
-              error = e;
+              console.error('Error in collection after hook:', e);
             }
           });
         };
