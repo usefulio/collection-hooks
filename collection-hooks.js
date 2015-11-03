@@ -2,7 +2,7 @@ var callstack = new Meteor.EnvironmentVariable();
 var withStackCheck = function (eventName, fn) {
   var currentStack = callstack.get() || [];
   if (_.contains(currentStack, eventName))
-    throw new Error('circular hook!');
+    return fn(new Error('circular hook!'));
   return callstack.withValue(currentStack.concat([eventName]), fn);
 };
 Mongo.Collection.prototype.hook = function (eventName, hook) {
@@ -31,7 +31,14 @@ Mongo.Collection.prototype.hook = function (eventName, hook) {
       if (_.isFunction(_.last(args)))
         callback = args.pop();
 
-      return withStackCheck(eventName, function () {
+      return withStackCheck(method, function (error) {
+        if (error) {
+          if (callback)
+            return callback(error);
+          else
+            throw error;
+        }
+
         _.each(self.before, function (hook) {
           hook.apply(collection, args);
         });
@@ -57,7 +64,7 @@ Mongo.Collection.prototype.hook = function (eventName, hook) {
 
         if (callback) {
           args.push(function (error, result) {
-            if (result)
+            if (!error)
               callhooks(result);
             callback(error, result);
           });

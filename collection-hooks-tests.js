@@ -212,6 +212,28 @@ Tinytest.add('UsefulCollections - hooks - catches & throws circular hooks', func
   }, /circular hook/i);
 });
 
+Tinytest.addAsync('UsefulCollections - hooks - catches & throws circular asyncronous hooks', function (test, done) {
+  var books = Meteor.isServer ? Books._collection : Books;
+  var m = false;
+  books.y = function (callback) {
+    Meteor.setTimeout(function () {
+      callback();
+    }, 0);
+  };
+  Books.hooks({
+    'after.y': function () {
+      if (m)
+        return;
+      m = true;
+      books.y(function (error) {
+        test.matches(error && error.message, /circular hook/i);
+        done();
+      });
+    }
+  });
+  books.y(function (error) { });
+});
+
 if (Meteor.isServer) {
   Tinytest.addAsync('UsefulCollections - hooks - survives monkey patch', function (test, done) {
     var original = Books._collection.insert;
